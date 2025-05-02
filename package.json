@@ -1,0 +1,18 @@
+{
+  "name": "my-chat-bot",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts",
+    "format": "npx @biomejs/biome format --write ./src"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "gramio": "^0.2.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}

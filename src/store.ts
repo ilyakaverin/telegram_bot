@@ -20,7 +20,7 @@ export const kv = {
 			const existing = await fs.readFile(STORAGE_PATH, "utf-8");
 			data = JSON.parse(existing);
 		} catch (err) {
-			// File doesn't exist yet
+			console.error("File doesn`t exist yet");
 		}
 
 		data[key] = value;

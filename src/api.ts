@@ -119,9 +119,27 @@ export const apiTokenManager = new TokenManager(
 	3600 * 1000,
 );
 
-export const fetchSystem = async () => {
-	const response = await apiTokenManager.makeAuthenticatedRequest(process.env.SYSTEM_REQUEST_URL!, {
-		method: "GET",
+export const add_user = async (payload) => {
+	const response = await apiTokenManager.makeAuthenticatedRequest(process.env.USER_URL!, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(payload),
 	});
+	return response.json();
+};
+
+export const update_user = async (payload) => {
+	const response = await apiTokenManager.makeAuthenticatedRequest(
+		`${process.env.USER_URL!}/${payload.username}`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(payload),
+		},
+	);
 	return response.json();
 };

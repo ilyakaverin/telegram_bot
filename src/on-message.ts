@@ -1,39 +1,62 @@
 import { BotLike, Keyboard, MessageContext } from "gramio";
-import { get_modified_user_params, get_new_user_request_params, time } from "./utils";
+import { get_modified_user_params, get_new_user_request_params } from "./utils";
 import { add_user, update_user } from "./api";
+import dayjs from "dayjs";
 
 export const on_message = (context) => {
 	return context.send("Выберите действие в меню");
 };
 
-export const on_successful_payment = async (context) => {
-	await context.send("Платеж получен! Доставляем товар...");
+export const on_successful_payment = (supabase) => async (context) => {
+	const { invoicePayload } = context.eventPayment;
+	const { order } = JSON.parse(invoicePayload);
+
+	try {
+		const { error } = await supabase.from("space_created_invoices").upsert(
+			{
+				id: context.from.id,
+				invoice_id: order,
+			},
+			{ onConflict: "invoice_id" },
+		);
+
+		if (error) throw error;
+		await context.send("Продлили еще на месяц!");
+	} catch (e) {
+		console.log(e);
+		context.send("Что-то пошло не так");
+	}
+
 	// Логика доставки цифрового товара
 };
 
-export const on_precheckout_query = async (context) => {
+export const on_precheckout_query = (supabase) => async (context) => {
 	const { invoicePayload } = context;
-	const { expiration, createdAt } = JSON.parse(invoicePayload);
+	const { expiration, createdAt, order } = JSON.parse(invoicePayload);
 
-	console.log(time().diff(createdAt, 'minutes'))
+	const is_invoice_expired = dayjs().unix() - createdAt > 900;
 
+	const { data } = await supabase.from("space_created_invoices").select("paid").eq("invoice_id", order);
 
-	// const payload = expiration
-	// 	? get_modified_user_params()
-	// 	: get_new_user_request_params(context.from.username);
+	const { paid } = data[0] || { paid: false };
 
-	// const request = expiration ? update_user : add_user;
+	if (is_invoice_expired || paid) {
+		return context.answer({
+			ok: false,
+			error_message: "Счет недействителен",
+		});
+	}
 
-	// try {
-	// 	const response = await request(payload);
+	try {
+		const response = await update_user(get_modified_user_params(expiration, context.from.username));
 
-	// 	console.log(response);
-	// } catch (e) {
-	// 	console.log("e", e);
-	// }
+		console.log(response);
 
-	return context.answer({
-		ok: false,
-		error_message: "У вас уже есть подписка",
-	});
+		return context.answer({
+			ok: false,
+			error_message: "wtf",
+		});
+	} catch (e) {
+		console.log("e", e);
+	}
 };

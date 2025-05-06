@@ -17,11 +17,7 @@ class TokenManager {
 			return this.token;
 		}
 
-		if (
-			!this.token ||
-			!this.tokenExpiry ||
-			new Date().getTime() + this.TOKEN_REFRESH_THRESHOLD > this.tokenExpiry.getTime()
-		) {
+		if (!this.token || !this.tokenExpiry || new Date().getTime() + this.TOKEN_REFRESH_THRESHOLD > this.tokenExpiry.getTime()) {
 			return this.refreshToken();
 		}
 
@@ -131,15 +127,12 @@ export const add_user = async (payload) => {
 };
 
 export const update_user = async (payload) => {
-	const response = await apiTokenManager.makeAuthenticatedRequest(
-		`${process.env.USER_URL!}/${payload.username}`,
-		{
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(payload),
+	const response = await apiTokenManager.makeAuthenticatedRequest(`${process.env.USER_URL!}/${payload.username}`, {
+		method: "PUT",
+		headers: {
+			"Content-Type": "application/json",
 		},
-	);
+		body: JSON.stringify(payload),
+	});
 	return response.json();
 };

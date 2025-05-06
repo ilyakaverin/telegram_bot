@@ -1,14 +1,6 @@
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
-
-export const time = dayjs
-
-export const get_new_user_request_params = (username: string) => ({
+export const get_new_user_request_params = (username: string, localtime: number) => ({
 	status: "active",
 	username,
 	note: "",
@@ -18,7 +10,7 @@ export const get_new_user_request_params = (username: string) => ({
 		},
 	},
 	data_limit: 0,
-	expire: time().tz("Europe/Moscow").add(1, "month").unix(),
+	expire: dayjs.unix(localtime).add(3, "day").unix(),
 	data_limit_reset_strategy: "no_reset",
 	inbounds: {
 		vless: ["VLESS TCP REALITY"],
@@ -26,6 +18,7 @@ export const get_new_user_request_params = (username: string) => ({
 	},
 });
 
-export const get_modified_user_params = () => ({
-	expire: dayjs().tz("Europe/Moscow").add(1, "month").unix(),
+export const get_modified_user_params = (expiration: number, username: string) => ({
+	username,
+	expire: dayjs.unix(expiration).add(1, "month").unix(),
 });

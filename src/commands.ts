@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
-import { getKeyboard } from "./keyboard";
 import { get_new_user_request_params } from "./utils";
-import { add_user } from "./api";
+import { add_user, get_user } from "./api";
 
 export const start_response = (supabase) => async (context) => {
 	try {
@@ -39,7 +38,7 @@ export const start_response = (supabase) => async (context) => {
 
 		if (error) throw error;
 
-		await context.send(`Привет, ${context.from.username}!\n Здесь вы можете купить ключ к VPN.`);
+		await context.send(`Привет, ${context.from.username}!\n Воспользуйся меню для покупки подписки/просмотра профиля.`);
 	} catch (error) {
 		console.error("Что-пошло не так", JSON.stringify(error));
 		context.send("Что-пошло не так");
@@ -47,12 +46,12 @@ export const start_response = (supabase) => async (context) => {
 };
 
 export const help_response = (context) => {
-	return context.send("Помощь!");
+	return context.send("Раздел наполняется");
 };
 
 export const buy_response = (supabase) => async (context) => {
 	try {
-		const { data, error } = await supabase.from("space_created_clients").select("price").eq("id", context.from.id);
+		const { data, error } = await supabase.from("space_created_clients").select("price, expiration").eq("id", context.from.id);
 
 		await context.bot.api.sendInvoice({
 			chat_id: context.chat.id,
@@ -73,5 +72,16 @@ export const buy_response = (supabase) => async (context) => {
 		console.log(e);
 
 		context.send("Что-то пошло не так, попробуйте еще раз");
+	}
+};
+
+export const profile_response = async (context) => {
+	try {
+		const response = await get_user(context.from.username);
+
+		context.send(`Ключ: ${response.subscription_url}\nПодписка действует до: ${dayjs.unix(response.expire).format("DD.MM.YYYY")}`);
+	} catch (e) {
+		console.log(e);
+		context.send("Ошибка");
 	}
 };

@@ -1,5 +1,5 @@
 import { Bot } from "gramio";
-import { buy_response, help_response, start_response } from "./commands";
+import { buy_response, help_response, profile_response, start_response } from "./commands";
 import { on_message, on_precheckout_query, on_successful_payment } from "./on-message";
 import { createClient } from "@supabase/supabase-js";
 const token = process.env.TOKEN;
@@ -15,6 +15,7 @@ const bot = new Bot(token)
 	.command("start", start_response(supabase))
 	.command("help", help_response)
 	.command("buy", buy_response(supabase))
+	.command("profile", profile_response)
 	.on("message", on_message)
 	.on("pre_checkout_query", on_precheckout_query(supabase))
 	.on("successful_payment", on_successful_payment(supabase))

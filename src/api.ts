@@ -136,3 +136,10 @@ export const update_user = async (payload) => {
 	});
 	return response.json();
 };
+
+export const get_user = async (username) => {
+	const response = await apiTokenManager.makeAuthenticatedRequest(`${process.env.USER_URL!}/${username}`, {
+		method: "GET",
+	});
+	return response.json();
+};

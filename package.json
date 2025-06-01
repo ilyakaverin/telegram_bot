@@ -7,12 +7,17 @@
     "format": "npx @biomejs/biome format --write ./src"
   },
   "dependencies": {
+    "@dev-aces/robokassa": "^1.2.0",
     "@supabase/supabase-js": "^2.49.4",
     "dayjs": "^1.11.13",
-    "gramio": "^0.2.2"
+    "elysia": "^1.3.1",
+    "gramio": "^0.2.2",
+    "localtunnel": "^2.0.2",
+    "untun": "^0.1.3"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
+    "@types/bun": "^1.2.12",
     "bun-types": "latest"
   },
   "module": "src/index.js"

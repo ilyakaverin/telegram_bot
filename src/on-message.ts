@@ -1,14 +1,14 @@
-import { BotLike, Keyboard, MessageContext } from "gramio";
-import { get_modified_user_params, get_new_user_request_params } from "./utils";
-import { add_user, update_user } from "./api";
+import { get_modified_user_params } from "./utils";
+import { update_user } from "./api";
 import dayjs from "dayjs";
+import { create_invoice, get_query_string } from "./lib/create-invoice";
 
 export const on_message = (context) => {
-	return context.send("Выберите действие в меню");
+	return context.send("Выберите действие из меню");
 };
 
 export const on_successful_payment = (supabase) => async (context) => {
-	const { invoicePayload } = context.eventPayment;
+	const { invoicePayload, telegramPaymentChargeId } = context.eventPayment;
 	const { order } = JSON.parse(invoicePayload);
 
 	try {
@@ -16,6 +16,9 @@ export const on_successful_payment = (supabase) => async (context) => {
 			{
 				id: context.from.id,
 				invoice_id: order,
+				paid: true,
+				transaction_id: telegramPaymentChargeId,
+				chat_id: context.chat.id,
 			},
 			{ onConflict: "invoice_id" },
 		);
@@ -26,8 +29,6 @@ export const on_successful_payment = (supabase) => async (context) => {
 		console.log(e);
 		context.send("Что-то пошло не так");
 	}
-
-	// Логика доставки цифрового товара
 };
 
 export const on_precheckout_query = (supabase) => async (context) => {
@@ -50,11 +51,18 @@ export const on_precheckout_query = (supabase) => async (context) => {
 	try {
 		const response = await update_user(get_modified_user_params(expiration, context.from.username));
 
-		console.log(response);
+		const { error } = await supabase.from("space_created_clients").upsert(
+			{
+				id: context.from.id,
+				expiration: response.expire,
+			},
+			{ onConflict: "id" },
+		);
+
+		if (error) throw error;
 
 		return context.answer({
-			ok: false,
-			error_message: "wtf",
+			ok: true,
 		});
 	} catch (e) {
 		console.log("e", e);

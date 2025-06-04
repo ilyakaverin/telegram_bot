@@ -1,10 +1,11 @@
 import dayjs from "dayjs";
 import { get_new_user_request_params } from "./utils";
 import { add_user, get_user } from "./api";
-import { InlineKeyboard } from "gramio";
+import { InlineKeyboard, LinkPreviewOptions } from "gramio";
 import { getOrderParameters } from "./lib/utils";
 import db from "./lib/supabase";
 import { Robokassa } from "@dev-aces/robokassa";
+import { help, welcome_new } from "./lib/text";
 
 export const start_response = async (context) => {
 	try {
@@ -20,7 +21,7 @@ export const start_response = async (context) => {
 			if (error) throw error;
 
 			return context.send(
-				`Привет, ${context.from.username}! Это комфортный и безопасный VPN\nВот твой ключ\n${response.subscription_url}\nУ тебя есть 2 дня пробного периода, после чего ты можешь продлить срок, воспользовавшись меню`,
+				welcome_new(context.from.username, response.subscription_url)
 			);
 		}
 
@@ -34,14 +35,16 @@ export const start_response = async (context) => {
 };
 
 export const help_response = (context) => {
-	return context.send("Раздел наполняется");
+	return context.send(help, {
+        disable_web_page_preview: true, // Disables link preview
+    });
 };
 
 export const payment_methods = (data) => (context) => {
 	context.send("Выберите метод оплаты", {
 		reply_markup: new InlineKeyboard()
-			.text("Telegram stars", data.pack({ id: 1 }))
-			.row()
+			// .text("Telegram stars", data.pack({ id: 1 }))
+			// .row()
 			.text("Банковская карта", data.pack({ id: 2 })),
 	});
 };
@@ -63,7 +66,14 @@ export const buy_response = (robokassa: Robokassa) => async (context) => {
 		return;
 	}
 
-	const params = getOrderParameters(context.from.id, price_response?.data.price!, invoice_id, order_id, price_response?.data.expiration!);
+	const params = getOrderParameters(
+		context.from.id,
+		price_response?.data.price!,
+		invoice_id,
+		order_id,
+		price_response?.data.expiration!,
+		context.from.username,
+	);
 	const url = robokassa.generatePaymentUrl(params);
 
 	switch (context.queryData.id) {

@@ -4,16 +4,14 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun run --watch src/index.ts",
-    "format": "npx @biomejs/biome format --write ./src"
+    "format": "npx @biomejs/biome format --write ./src",
+    "tunnel": "npx lt --port 3000"
   },
   "dependencies": {
     "@dev-aces/robokassa": "^1.2.0",
     "@supabase/supabase-js": "^2.49.4",
     "dayjs": "^1.11.13",
-    "elysia": "^1.3.1",
-    "gramio": "^0.2.2",
-    "localtunnel": "^2.0.2",
-    "untun": "^0.1.3"
+    "gramio": "^0.2.2"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",

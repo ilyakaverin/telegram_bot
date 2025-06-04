@@ -7,6 +7,8 @@ import { getResponse } from "./lib/utils";
 import db from "./lib/supabase";
 import { update_user } from "./api";
 import { get_modified_user_params } from "./utils";
+import { success_text } from "./lib/text";
+import dayjs from "dayjs";
 
 const token = process.env.TOKEN;
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -45,24 +47,25 @@ const server = Bun.serve({
 			GET: () => new Response("under maintenance"),
 		},
 		"/success": {
-			GET: () => new Response("from browser"),
+			GET: () => new Response("payed successully!"),
 			POST: async (request) => {
 				const response = (await getResponse(request)) as unknown as IRobokassaResponse;
 
 				if (robokassa.checkPayment(response)) {
 					console.log("Successful payment!");
 
-					const { InvId, shp_user_id, shp_order_id, shp_user_expiration } = response;
+					const { InvId, shp_user_id, shp_order_id, shp_user_expiration, shp_username } = response;
 
 					try {
 						const update_invoice_error = await db.updateInvoice(shp_user_id, InvId, shp_order_id, true);
-						const response = await update_user(get_modified_user_params(Number(shp_user_expiration), context.from.username));
+						const response = await update_user(get_modified_user_params(Number(shp_user_expiration), shp_username));
+						const error = await db.updateUser(Number(shp_user_id), response.expire);
 
-						if (update_invoice_error) throw update_invoice_error;
+						if (update_invoice_error || error) throw update_invoice_error || error;
 
 						bot.api.sendMessage({
 							chat_id: shp_user_id,
-							text: "Оплата прошла",
+							text: success_text(dayjs.unix(Number(shp_user_expiration)).add(1, "month").format('DD.MM.YYYY')),
 						});
 					} catch (e) {
 						bot.api.sendMessage({
@@ -79,7 +82,7 @@ const server = Bun.serve({
 			},
 		},
 		"/failed": {
-			GET: () => new Response("failed page"),
+			GET: () => new Response("precessing failed"),
 		},
 	},
 });

@@ -5,7 +5,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun run --watch src/index.ts",
     "format": "npx @biomejs/biome format --write ./src",
-    "tunnel": "npx lt --port 3000"
+    "build": "bun build --compile --target=bun-linux-x64-modern src/index.ts --outfile myapp"
   },
   "dependencies": {
     "@dev-aces/robokassa": "^1.2.0",
@@ -18,5 +18,5 @@
     "@types/bun": "^1.2.12",
     "bun-types": "latest"
   },
-  "module": "src/index.js"
+  "module": "src/index.ts"
 }

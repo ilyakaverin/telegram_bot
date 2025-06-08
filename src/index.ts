@@ -45,6 +45,7 @@ bot.start();
 
 const server = Bun.serve({
 	port: 3000,
+	development: false,
 	routes: {
 		"/": homepage,
 		"/success": success,

@@ -9,6 +9,9 @@ import { update_user } from "./api";
 import { get_modified_user_params } from "./utils";
 import { success_text } from "./lib/text";
 import dayjs from "dayjs";
+import homepage from "./frontend/index.html";
+import success from './frontend/success.html'
+import failed from './frontend/failed.html';
 
 const token = process.env.TOKEN;
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -43,11 +46,10 @@ bot.start();
 const server = Bun.serve({
 	port: 3000,
 	routes: {
-		"/": {
-			GET: () => new Response("under maintenance"),
-		},
-		"/success": {
-			GET: () => new Response("payed successully!"),
+		"/": homepage,
+		"/success": success,
+		"/failed": failed, 
+		"/api/result": {
 			POST: async (request) => {
 				const response = (await getResponse(request)) as unknown as IRobokassaResponse;
 
@@ -80,9 +82,6 @@ const server = Bun.serve({
 					return new Response(`Failure`);
 				}
 			},
-		},
-		"/failed": {
-			GET: () => new Response("precessing failed"),
 		},
 	},
 });

@@ -1,11 +1,11 @@
-
 # use the official Bun image
-# see all versions at https://hub.docker.com/r/oven/bun/tags
 FROM oven/bun:1 AS base
 WORKDIR /usr/src/app
 
+# Set production environment early
+ENV NODE_ENV=production
+
 # install dependencies into temp directory
-# this will cache them and speed up future builds
 FROM base AS install
 RUN mkdir -p /temp/dev
 COPY package.json bun.lock /temp/dev/
@@ -17,12 +17,11 @@ COPY package.json bun.lock /temp/prod/
 RUN cd /temp/prod && bun install --frozen-lockfile --production
 
 # copy node_modules from temp directory
-# then copy all (non-ignored) project files into the image
 FROM base AS prerelease
 COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
 
-# [optional] tests & build
+# Ensure NODE_ENV is production for build
 ENV NODE_ENV=production
 RUN bun test
 RUN bun run build
@@ -32,6 +31,9 @@ FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /usr/src/app/src .
 COPY --from=prerelease /usr/src/app/package.json .
+
+# Ensure production environment in final image
+ENV NODE_ENV=production
 
 # run the app
 USER bun

@@ -76,9 +76,7 @@ export const kv = {
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
     await mutex.acquire();
     try {
-      // Создаем директорию если она не существует
-      await fs.mkdir(path.dirname(STORAGE_PATH), { recursive: true });
-      
+
       let data: CacheData = {};
       
       try {

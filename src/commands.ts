@@ -61,7 +61,7 @@ export const payment_methods = (data) => async (context) => {
 	context.send(payment(price_response?.data.price),
 		{
 			reply_markup: new InlineKeyboard()
-				.text("Оплатить telegram stars", data.pack({ id: 1, price: price_response?.data.price, expiration: price_response?.data.expiration }))
+				.text("Выбрать telegram stars", data.pack({ id: 1, price: price_response?.data.price, expiration: price_response?.data.expiration }))
 				// .row()
 				// .text("Оплата картой", data.pack({ id: 2, price: price_response?.data.price, expiration: price_response?.data.expiration })),
 		},
@@ -87,7 +87,7 @@ export const buy_response = async (context) => {
 				try {
 					await context.bot.api.sendInvoice({
 						chat_id: context.message.chat.id,
-						title: "Оплата подписки на 1 месяц",
+						title: "Счет на оплату подписки на 1 месяц",
 						description: `Счет действителен в течение 15 минут.`,
 						payload: {
 							createdAt: context.message.createdAt,

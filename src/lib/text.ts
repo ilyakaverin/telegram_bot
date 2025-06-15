@@ -1,7 +1,7 @@
 import { format, formatSaveIndents, link } from "@gramio/format";
 
 export const ios_url = format`${link("IOS or macOs", "https://apps.apple.com/ru/app/v2raytun/id6476628951")}`;
-export const android_url = format`${link("Android", "https://apps.apple.com/ru/app/v2raytun/id6476628951")}`;
+export const android_url = format`${link("Android", "https://play.google.com/store/apps/details?id=com.v2raytun.android")}`;
 export const windows_url = format`${link("Windows", "https://apps.microsoft.com/detail/9pdfnl3qv2s5?hl=en-US&gl=RU")}`;
 
 export const help = formatSaveIndents`Приложения для смартфонов
@@ -41,6 +41,7 @@ export const payment = (price: number) => formatSaveIndents`Что вы полу
  ✅ Безлимитный трафик
  ✅ Высокая скорость соединения (до 1 Гбит/с)
  ✅ Без логов и отслеживания
+ 💳 Оплата картой(скоро)
 
 📱 Поддерживаемые устройства:
 
@@ -49,7 +50,9 @@ export const payment = (price: number) => formatSaveIndents`Что вы полу
  Роутеры и Smart TV (скоро)
 
 💰 Тарифы:
-🔸 1 месяц — ${price} ₽ или ${price} ⭐️
+🔸 1 месяц —  ${price} ⭐️
+
+💫 Оплата происходит безопасно через Telegram Stars
 
 ⚡ Активация мгновенная — доступ сразу после оплаты
 

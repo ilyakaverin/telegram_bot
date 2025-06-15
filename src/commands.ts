@@ -1,28 +1,44 @@
 import dayjs from "dayjs";
 import { get_new_user_request_params } from "./utils";
-import { add_user, get_user } from "./api";
-import { InlineKeyboard, LinkPreviewOptions } from "gramio";
-import { getOrderParameters } from "./lib/utils";
+import { get_user, userService } from "./api";
+import { bold, formatSaveIndents, InlineKeyboard, MessageContext } from "gramio";
 import db from "./lib/supabase";
-import { Robokassa } from "@dev-aces/robokassa";
-import { help, welcome_new } from "./lib/text";
+import { help, payment, welcome_new } from "./lib/text";
+import { ICreatePayment } from "@a2seven/yoo-checkout";
+import { checkout } from "./lib/utils";
 
-export const start_response = async (context) => {
+const createPayload: ICreatePayment = {
+	amount: {
+		value: "2.00",
+		currency: "RUB",
+	},
+	payment_method_data: {
+		type: "bank_card",
+	},
+	confirmation: {
+		type: "redirect",
+		return_url: "test",
+	},
+};
+
+export const start_response = async (context: any) => {
 	try {
 		const user = await db.getUser(context.from.id, context.from.username);
 		const isNew = user.data.expiration === null;
 
 		if (isNew) {
 			const payload = get_new_user_request_params(context.from.username, dayjs().unix());
-			const response = await add_user(payload);
+			const response = await userService.addUser(payload);
 
-			const error = await db.updateUser(context.from.id, response.expire);
+			if (response.error) throw new Error("get_subscription_error");
+
+			const error = await db.updateUser(context.from.id, response.data.expire);
 
 			if (error) throw error;
 
-			return context.send(
-				welcome_new(context.from.username, response.subscription_url)
-			);
+			return context.send(welcome_new(context.from.username, response.data.subscription_url), {
+				disable_web_page_preview: true, // Disables link preview
+			});
 		}
 
 		if (user.error) throw user.error;
@@ -36,47 +52,36 @@ export const start_response = async (context) => {
 
 export const help_response = (context) => {
 	return context.send(help, {
-        disable_web_page_preview: true, // Disables link preview
-    });
-};
-
-export const payment_methods = (data) => (context) => {
-	context.send("Выберите метод оплаты", {
-		reply_markup: new InlineKeyboard()
-			// .text("Telegram stars", data.pack({ id: 1 }))
-			// .row()
-			.text("Банковская карта", data.pack({ id: 2 })),
+		disable_web_page_preview: true, // Disables link preview
 	});
 };
 
-export const buy_response = (robokassa: Robokassa) => async (context) => {
-	const [price_response, highestOrderNumber] = await Promise.all([
-		db.getPriceAndSubscriptionExpiration(context.from.id),
-		db.getHighestOrderNumber(context.from.id),
-	]);
+export const payment_methods = (data) => async (context) => {
+	const price_response = await db.getPriceAndSubscriptionExpiration(context.from.id);
+	context.send(payment(price_response?.data.price),
+		{
+			reply_markup: new InlineKeyboard()
+				.text("Оплатить telegram stars", data.pack({ id: 1, price: price_response?.data.price, expiration: price_response?.data.expiration }))
+				// .row()
+				// .text("Оплата картой", data.pack({ id: 2, price: price_response?.data.price, expiration: price_response?.data.expiration })),
+		},
+	);
+};
 
-	const invoice_id = highestOrderNumber + 1;
+export const buy_response = async (context) => {
+	const { id, price, expiration } = context.queryData;
+
 	const order_id = Bun.randomUUIDv7();
 
-	const update_invoice_error = await db.updateInvoice(context.from.id, invoice_id, order_id, false);
+	const update_invoice_error = await db.updateInvoice(context.from.id, order_id, false);
 
-	if (update_invoice_error || price_response?.error) {
+	if (update_invoice_error) {
 		context.send("Произошла ошибка, Выберите способ оплаты еще раз");
 
 		return;
 	}
 
-	const params = getOrderParameters(
-		context.from.id,
-		price_response?.data.price!,
-		invoice_id,
-		order_id,
-		price_response?.data.expiration!,
-		context.from.username,
-	);
-	const url = robokassa.generatePaymentUrl(params);
-
-	switch (context.queryData.id) {
+	switch (id) {
 		case 1:
 			{
 				try {
@@ -86,12 +91,12 @@ export const buy_response = (robokassa: Robokassa) => async (context) => {
 						description: `Счет действителен в течение 15 минут.`,
 						payload: {
 							createdAt: context.message.createdAt,
-							expiration: price_response?.data.expiration,
-							order: invoice_id,
+							expiration: expiration,
+							order_id,
 						},
 						currency: "XTR",
 						protect_content: true,
-						prices: [{ label: "1 Месяц", amount: price_response?.data.price }],
+						prices: [{ label: "1 Месяц", amount: price }],
 					});
 				} catch (e) {
 					console.log(e);
@@ -101,9 +106,21 @@ export const buy_response = (robokassa: Robokassa) => async (context) => {
 			break;
 		case 2:
 			{
-				context.send("Оплата подписки на 1 месяц", {
-					reply_markup: new InlineKeyboard().url(`Оплатить ${price_response?.data.price} ₽`, url).row().url("Оферта", process.env.OFERTA!),
-				});
+				try {
+					const payment = await checkout.createPayment(createPayload, order_id);
+					context.send(
+						formatSaveIndents`Оплата подписки на 1 месяц:
+					Стоимость: ${bold(price)} ₽
+					Подписка до: ${bold(dayjs.unix(Number(expiration)).add(1, "month").format("DD.MM.YYYY"))}
+					Номер заказа: ${order_id}
+					`,
+						{
+							reply_markup: new InlineKeyboard().url(`Оплатить ${price} ₽`, payment.confirmation.confirmation_url!), //.row().url("Оферта", process.env.OFERTA!),
+						},
+					);
+				} catch (error) {
+					console.error(error);
+				}
 			}
 
 			break;

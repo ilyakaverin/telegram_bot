@@ -1,5 +1,6 @@
 import { createClient, PostgrestError, PostgrestSingleResponse } from "@supabase/supabase-js";
 import { GetUser } from "../interfaces";
+import { Invoice } from "../interfaces/supabase";
 
 class Supabase {
 	private supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
@@ -38,11 +39,10 @@ class Supabase {
 
 		return error;
 	}
-	async updateInvoice(id: string, invoice_id: number, order_id: string, paid: boolean): Promise<PostgrestError | null> {
+	async updateInvoice(id: string, order_id: string, paid: boolean): Promise<PostgrestError | null> {
 		const { error } = await this.supabase.from(this.invoices_db).upsert(
 			{
 				id,
-				invoice_id,
 				paid,
 				order_id,
 			},
@@ -51,28 +51,22 @@ class Supabase {
 
 		return error;
 	}
-	async getHighestOrderNumber(userId: number): Promise<number> {
-		const { data, error } = await this.supabase
-			.from(this.invoices_db) // replace with your table name
-			.select("invoice_id")
-			.eq("id", userId)
-			.order("invoice_id", { ascending: false })
-			.limit(1)
-			.single();
+	async checkInvoice(order_id: string): Promise<Invoice> {
+		const { data, error } = (await this.supabase.from(this.invoices_db).select("paid").eq("order_id", order_id).single()) as Invoice;
 
 		if (error) {
 			// Handle specific "no rows" error differently
 			if (error.code === "PGRST116") {
 				// This is the code for "No rows returned"
 				console.log("No orders found for user, returning default value");
-				return 1; // or whatever default you want
+				return { data: { paid: false }, error: null }; // or whatever default you want
 			}
 
 			console.error("Error fetching highest order number:", error);
 			throw error; // or return a default value
 		}
 
-		return data?.invoice_id || 1; // Fallback to 0 if data exists but order_number is null
+		return { data, error };
 	}
 
 	async getPriceAndSubscriptionExpiration(id: number): Promise<PostgrestSingleResponse<{ price: number; expiration: number }> | undefined> {

@@ -9,7 +9,7 @@
     "start": "bun run src/index.ts"
   },
   "dependencies": {
-    "@dev-aces/robokassa": "^1.2.0",
+    "@a2seven/yoo-checkout": "^1.1.4",
     "@supabase/supabase-js": "^2.49.4",
     "dayjs": "^1.11.13",
     "gramio": "^0.2.2"

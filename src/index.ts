@@ -34,9 +34,11 @@ const app = new Elysia()
 	// .use(ipFilter)
 	.post("/eagle", async ({ body }) => {
 
-		if(!body?.object.metadata) return 'I SEE YOU'
+		if(!body?.object?.metadata) return 'I SEE YOU'
 
 		const { expireAt, order_id, user_id, uuid } = body?.object.metadata;
+
+		const newExpire = dayjs(expireAt).add(1, "month").toISOString()
 
 		switch (body.event) {
 			case "payment.waiting_for_capture":
@@ -44,9 +46,11 @@ const app = new Elysia()
 					try {
 						const update_invoice_error = await db.updateInvoice(user_id, order_id, true);
 
+						const error = await db.updateUser(Number(user_id), newExpire, uuid);
+
 						const response = await userService.updateUser(get_modified_user_params(expireAt, uuid));
 
-						if (update_invoice_error || response.error) throw update_invoice_error || response.error;
+						if (update_invoice_error || response.error || error) throw update_invoice_error || response.error || error;
 
 						await checkout.capturePayment(body.object.id, { amount: body.object.amount }, order_id);
 					} catch (e) {

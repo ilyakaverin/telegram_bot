@@ -28,11 +28,12 @@ class Supabase {
 		return { data, error };
 	}
 
-	async updateUser(id: number, expiration: number): Promise<PostgrestError | null> {
+	async updateUser(id: number, expiration: number, uuid: string): Promise<PostgrestError | null> {
 		const { error } = await this.supabase.from(this.clients_db).upsert(
 			{
 				id: id,
-				expiration,
+				expireAt: expiration,
+				uuid,
 			},
 			this.clients_db_on_conflict,
 		);
@@ -69,15 +70,15 @@ class Supabase {
 		return { data, error };
 	}
 
-	async getPriceAndSubscriptionExpiration(id: number): Promise<PostgrestSingleResponse<{ price: number; expiration: number }> | undefined> {
+	async getUserData(id: number, data: string): Promise<PostgrestSingleResponse<{ price: number; expireAt: string }> | undefined> {
 		let result;
 		try {
-			result = await this.supabase.from(this.clients_db).select("price, expiration").eq("id", id).single();
+			result = await this.supabase.from(this.clients_db).select(data).eq("id", id).single();
 		} catch (e) {
-			console.log("getPriceAndSubscriptionExpiration error");
+			console.log("getUserData");
 		}
 
-		return result;
+		return result?.data;
 	}
 }
 

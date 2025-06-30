@@ -28,7 +28,7 @@ class Supabase {
 		return { data, error };
 	}
 
-	async updateUser(id: number, expiration: number, uuid: string): Promise<PostgrestError | null> {
+	async updateUser(id: number, expiration: string, uuid: string): Promise<PostgrestError | null> {
 		const { error } = await this.supabase.from(this.clients_db).upsert(
 			{
 				id: id,

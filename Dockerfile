@@ -35,6 +35,9 @@ COPY --from=prerelease /usr/src/app/package.json .
 # Ensure production environment in final image
 ENV NODE_ENV=production
 
+# Fix ownership BEFORE switching to bun user
+RUN mkdir -p /usr/src/app/src && chown -R bun:bun /usr/src/app
+
 # run the app
 USER bun
 EXPOSE 3000/tcp

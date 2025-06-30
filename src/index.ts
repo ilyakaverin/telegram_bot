@@ -34,6 +34,8 @@ const app = new Elysia()
 	// .use(ipFilter)
 	.post("/eagle", async ({ body }) => {
 
+		if(!body?.object.metadata) return 'I SEE YOU'
+
 		const { expireAt, order_id, user_id, uuid } = body?.object.metadata;
 
 		switch (body.event) {

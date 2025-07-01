@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const STORAGE_PATH = path.join(process.cwd(), "src", "token_cache");
+const STORAGE_PATH = path.join(process.cwd(), "src", "cache.json");
 
 // Мьютекс для предотвращения concurrent записей
 class FileMutex {

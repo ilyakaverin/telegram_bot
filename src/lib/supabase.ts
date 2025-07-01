@@ -28,6 +28,18 @@ class Supabase {
 		return { data, error };
 	}
 
+	async updateEmail(id: number, email: string): Promise<PostgrestError | null> {
+		const { error } = await this.supabase.from(this.clients_db).upsert(
+			{
+				id: id,
+				email,
+			},
+			this.clients_db_on_conflict,
+		);
+
+		return error;
+	}
+
 	async updateUser(id: number, expiration: string, uuid: string): Promise<PostgrestError | null> {
 		const { error } = await this.supabase.from(this.clients_db).upsert(
 			{
@@ -70,7 +82,7 @@ class Supabase {
 		return { data, error };
 	}
 
-	async getUserData(id: number, data: string): Promise<PostgrestSingleResponse<{ price: number; expireAt: string }> | undefined> {
+	async getUserData(id: number, data: string): Promise<PostgrestSingleResponse<{ price: number; expireAt: string; email: string }> | undefined> {
 		let result;
 		try {
 			result = await this.supabase.from(this.clients_db).select(data).eq("id", id).single();

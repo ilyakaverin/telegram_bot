@@ -2,9 +2,39 @@ import { get_modified_user_params } from "./utils";
 import { update_user, userService } from "./api";
 import dayjs from "dayjs";
 import db from "./lib/supabase";
+import { kv } from "./store";
 
-export const on_message = (context) => {
-	return context.send("Выберите действие из меню");
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const on_message = async (context) => {
+
+	const status = await kv.get(context.from.id);
+
+	if (status === "waiting_email") {
+		if (emailRegex.test(context.text)) {
+			try {
+				const response = await db.getUserData(context.from.id, "email");
+
+				if (response?.email === context.text) {
+					context.send("Такая почта уже используется");
+					return;
+				}
+
+				const error = await db.updateEmail(context.from.id, context.text);
+				if (error) throw error;
+
+				kv.delete(context.from.id);
+
+				context.send(`${context.text} - На эту почту будут приходить чеки об оплате.`);
+			} catch (e) {
+				context.send("Что-то пошло не так, введите почту еще раз");
+			}
+		} else {
+			context.send("Неправильный формат почты");
+		}
+	} else {
+		return context.send("Выберите действие из меню");
+	}
 };
 
 export const on_successful_payment = async (context) => {

@@ -3,12 +3,13 @@ import { get_new_user_request_params } from "./utils";
 import { get_user, userService } from "./api";
 import { bold, formatSaveIndents, InlineKeyboard, MessageContext } from "gramio";
 import db from "./lib/supabase";
-import { help, payment, profile, welcome_new } from "./lib/text";
+import { payment, profile, welcome_new } from "./lib/text";
 import { ICreatePayment } from "@a2seven/yoo-checkout";
 import { checkout } from "./lib/utils";
 import { uniqueNamesGenerator, adjectives, colors, animals } from "unique-names-generator";
+import { kv } from "./store";
 
-const createPayload = (price, user_id, order_id, expireAt, uuid): ICreatePayment => ({
+const createPayload = (price, user_id, order_id, expireAt, uuid, email): ICreatePayment => ({
 	amount: {
 		value: price,
 		currency: "RUB",
@@ -25,6 +26,24 @@ const createPayload = (price, user_id, order_id, expireAt, uuid): ICreatePayment
 	confirmation: {
 		type: "redirect",
 		return_url: "https://t.me/createdspacebot",
+	},
+	description: `Оплата заказа ${order_id}`,
+	receipt: {
+		// Если нужен чек
+		customer: {
+			email,
+		},
+		items: [
+			{
+				description: "Оплата подписки",
+				quantity: "1.00",
+				amount: {
+					value: price,
+					currency: "RUB",
+				},
+				vat_code: 1,
+			},
+		],
 	},
 });
 
@@ -61,7 +80,7 @@ export const start_response = async (context: any) => {
 };
 
 export const help_response = (context) => {
-	return context.send("Помощь в решении вопросов - admin@kekis.online", {
+	return context.send("Помощь в решении вопросов - https://t.me/kekisonline", {
 		disable_web_page_preview: true, // Disables link preview
 	});
 };
@@ -73,10 +92,9 @@ export const payment_methods = (data) => async (context) => {
 		const { price } = response;
 
 		context.send(payment(price), {
-			reply_markup: new InlineKeyboard()
-				.text("Выбрать оплату банковской картой", data.pack({ id: 2, price: price }))
-				// .row()
-				// .text("Выбрать оплату telegram stars", data.pack({ id: 1, price })),
+			reply_markup: new InlineKeyboard().text("Выбрать оплату банковской картой", data.pack({ id: 2, price: price })),
+			// .row()
+			// .text("Выбрать оплату telegram stars", data.pack({ id: 1, price })),
 		});
 	} catch (e) {
 		console.log("e");
@@ -86,11 +104,22 @@ export const payment_methods = (data) => async (context) => {
 export const buy_response = async (context) => {
 	const { id, price } = context.queryData;
 
+	if(id === 3) {
+		await kv.delete(context.from.id);
+		context.send('Ввод почты отменен');
+		return
+	}
+
+	const response = await db.getUserData(context.from.id, "expireAt, uuid, email");
+
+	const { expireAt, uuid, email } = response;
+
+	if (!email) {
+		context.send("Для проведения оплат, привяжите почту, туда будут приходить чеки, кнопка для привязки почты в меню 🔽");
+		return;
+	}
+
 	const order_id = Bun.randomUUIDv7();
-
-	const response = await db.getUserData(context.from.id, "expireAt, uuid");
-
-	const { expireAt, uuid } = response;
 
 	const update_invoice_error = await db.updateInvoice(context.from.id, order_id, false);
 
@@ -126,7 +155,12 @@ export const buy_response = async (context) => {
 		case 2:
 			{
 				try {
-					const payment = await checkout.createPayment(createPayload(price, context.from.id, order_id, expireAt, uuid), order_id);
+					const payment = await checkout.createPayment(createPayload(price, context.from.id, order_id, expireAt, uuid, email), order_id);
+
+					if (!payment.confirmation) {
+						throw new Error("error");
+					}
+
 					context.send(
 						formatSaveIndents`Оплата подписки на 1 месяц:
 					Стоимость: ${bold(price)} ₽
@@ -138,6 +172,7 @@ export const buy_response = async (context) => {
 						},
 					);
 				} catch (error) {
+					context.send("Что-то пошло не так, попробуйте нажать выбрать оплату еще раз.");
 					console.error(error);
 				}
 			}

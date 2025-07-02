@@ -7,7 +7,6 @@ import { kv } from "./store";
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const on_message = async (context) => {
-
 	const status = await kv.get(context.from.id);
 
 	if (status === "waiting_email") {

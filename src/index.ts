@@ -58,8 +58,6 @@ const app = new Elysia()
 			case "payment.waiting_for_capture":
 				{
 					try {
-						const update_invoice_error = await db.updateInvoice(user_id, order_id, true);
-
 						const error = await db.updateUser(Number(user_id), newExpire, uuid);
 
 						const response = await userService.updateUser(get_modified_user_params(expireAt, uuid));
@@ -78,10 +76,21 @@ const app = new Elysia()
 				break;
 			case "payment.succeeded":
 				{
-					bot.api.sendMessage({
-						chat_id: user_id,
-						text: success_text(dayjs(expireAt).add(1, "month").format("DD.MM.YYYY")),
-					});
+					try {
+						const update_invoice_error = await db.updateInvoice(user_id, order_id, true);
+
+						if (update_invoice_error) throw update_invoice_error;
+
+						bot.api.sendMessage({
+							chat_id: user_id,
+							text: success_text(dayjs(expireAt).add(1, "month").format("DD.MM.YYYY")),
+						});
+					} catch (e) {
+						bot.api.sendMessage({
+							chat_id: process.env.ADMIN_ID!,
+							text: `Оплата прошла, подписка у ${user_id} продлена, но инвойс в true не перешел`,
+						});
+					}
 				}
 				break;
 			default: {

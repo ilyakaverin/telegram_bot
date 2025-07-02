@@ -104,10 +104,10 @@ export const payment_methods = (data) => async (context) => {
 export const buy_response = async (context) => {
 	const { id, price } = context.queryData;
 
-	if(id === 3) {
+	if (id === 3) {
 		await kv.delete(context.from.id);
-		context.send('Ввод почты отменен');
-		return
+		context.send("Ввод почты отменен");
+		return;
 	}
 
 	const response = await db.getUserData(context.from.id, "expireAt, uuid, email");

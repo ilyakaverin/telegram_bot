@@ -1,6 +1,7 @@
 import Elysia from "elysia";
 import { RequestLike, ParsedQueryParams } from "../interfaces/utils";
 import { YooCheckout } from "@a2seven/yoo-checkout";
+import { createHmac } from "crypto";
 
 export const getResponse = async (request: RequestLike): Promise<ParsedQueryParams> => {
 	const body: string = await request.text();
@@ -31,3 +32,21 @@ export const ipFilter = (app: Elysia) => {
 		return { clientIP: ipAddress };
 	});
 };
+
+export interface WebhookHeaders {
+	'x-remnawave-signature': string
+	'x-remnawave-timestamp': string
+}
+
+export const validateWebhook = (data: {
+	body: unknown
+	headers: WebhookHeaders,
+}): boolean =>  {
+	if (!process.env.PALANTIR_KEY) return false
+
+	const signature = createHmac('sha256', process.env.PALANTIR_KEY)
+		.update(JSON.stringify(data.body))
+		.digest('hex')
+
+	return signature === data.headers['x-remnawave-signature']
+}

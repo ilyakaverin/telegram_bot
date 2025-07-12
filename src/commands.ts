@@ -114,6 +114,10 @@ export const buy_response = async (context) => {
 
 	const { expireAt, uuid, email } = response;
 
+	const now = dayjs();
+
+	const date_to_start = now.isAfter(expireAt) ? now.toISOString() : expireAt;
+
 	if (!email) {
 		context.send("Для проведения оплат, привяжите почту, туда будут приходить чеки, кнопка для привязки почты в меню 🔽");
 		return;
@@ -155,7 +159,7 @@ export const buy_response = async (context) => {
 		case 2:
 			{
 				try {
-					const payment = await checkout.createPayment(createPayload(price, context.from.id, order_id, expireAt, uuid, email), order_id);
+					const payment = await checkout.createPayment(createPayload(price, context.from.id, order_id, date_to_start, uuid, email), order_id);
 
 					if (!payment.confirmation) {
 						throw new Error("error");
@@ -164,7 +168,7 @@ export const buy_response = async (context) => {
 					context.send(
 						formatSaveIndents`Оплата подписки на 1 месяц:
 					Стоимость: ${bold(price)} ₽
-					Подписка до: ${bold(dayjs(expireAt).add(1, "month").format("DD.MM.YYYY"))}
+					Подписка до: ${bold(dayjs(date_to_start).add(1, "month").format("DD.MM.YYYY"))}
 					Номер заказа: ${order_id}
 					`,
 						{

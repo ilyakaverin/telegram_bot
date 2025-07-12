@@ -3,9 +3,9 @@ import { buy_response, help_response, payment_methods, profile_response, start_r
 import { limit_consumer } from "./lib/rate-limiter";
 import { on_message, on_precheckout_query, on_successful_payment } from "./on-message";
 import Elysia from "elysia";
-import { checkout, ipFilter } from "./lib/utils";
+import { checkout, validateWebhook } from "./lib/utils";
 import db from "./lib/supabase";
-import { update_user, userService } from "./api";
+import { userService } from "./api";
 import { get_modified_user_params } from "./utils";
 import dayjs from "dayjs";
 import { success_text } from "./lib/text";
@@ -62,7 +62,7 @@ const app = new Elysia()
 
 						const response = await userService.updateUser(get_modified_user_params(expireAt, uuid));
 
-						if (update_invoice_error || response.error || error) throw update_invoice_error || response.error || error;
+						if (response.error || error) throw response.error || error;
 
 						await checkout.capturePayment(body.object.id, { amount: body.object.amount }, order_id);
 					} catch (e) {
@@ -99,28 +99,11 @@ const app = new Elysia()
 			}
 		}
 	})
+	.post('/palantir', ({ body, headers}) => {
+		if(!validateWebhook({ body, headers })) return 'I SEE YOU';
+
+	})
 	.listen(3000);
 
 console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
 
-// 					console.log("Successful payment!");
-
-// 					const { InvId, shp_user_id, shp_order_id, shp_user_expiration, shp_username } = response;
-
-// 					try {
-// 						const update_invoice_error = await db.updateInvoice(shp_user_id, InvId, shp_order_id, true);
-// 						const response = await update_user(get_modified_user_params(Number(shp_user_expiration), shp_username));
-// 						const error = await db.updateUser(Number(shp_user_id), response.expire);
-
-// 						if (update_invoice_error || error) throw update_invoice_error || error;
-
-// 						bot.api.sendMessage({
-// 							chat_id: shp_user_id,
-// 							text: success_text(dayjs.unix(Number(shp_user_expiration)).add(1, "month").format('DD.MM.YYYY')),
-// 						});
-// 					} catch (e) {
-// bot.api.sendMessage({
-// 	chat_id: shp_user_id,
-// 	text: `Оплата прошла. Но что-то пошло не так.\n Ваш номер заказа ${shp_order_id}. Напишите на почту, указанную в оферте. `,
-// });
-// 					}

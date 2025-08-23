@@ -50,15 +50,15 @@ const app = new Elysia()
 	.post("/eagle", async ({ body }) => {
 		if (!body?.object?.metadata) return "I SEE YOU";
 
-		const { expireAt, order_id, user_id, uuid } = body?.object.metadata;
+		const { expireAt, order_id, user_id, uuid, referrer } = body?.object.metadata;
 
-		const newExpire = dayjs(expireAt).add(1, "month").toISOString();
+		const newExpire = dayjs(expireAt).add(referrer ? 2 : 1, "month").toISOString();
 
 		switch (body.event) {
 			case "payment.waiting_for_capture":
 				{
 					try {
-						const error = await db.updateUser(Number(user_id), newExpire, uuid);
+						const error = await db.updateUser(Number(user_id), newExpire, uuid, null);
 
 						const response = await userService.updateUser(get_modified_user_params(expireAt, uuid));
 

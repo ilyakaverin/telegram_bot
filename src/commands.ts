@@ -1,59 +1,23 @@
 import dayjs from "dayjs";
 import { get_new_user_request_params } from "./utils";
-import { get_user, userService } from "./api";
-import { bold, formatSaveIndents, InlineKeyboard, MessageContext } from "gramio";
+import { userService } from "./api";
+import { bold, formatSaveIndents, InlineKeyboard } from "gramio";
 import db from "./lib/supabase";
 import { payment, profile, welcome_new } from "./lib/text";
-import { ICreatePayment } from "@a2seven/yoo-checkout";
-import { checkout } from "./lib/utils";
+import { checkout, createPayload, getReffererIdFromStart } from "./lib/utils";
 import { uniqueNamesGenerator, adjectives, colors, animals } from "unique-names-generator";
 import { kv } from "./store";
 
-const createPayload = (price, user_id, order_id, expireAt, uuid, email): ICreatePayment => ({
-	amount: {
-		value: price,
-		currency: "RUB",
-	},
-	payment_method_data: {
-		type: "bank_card",
-	},
-	metadata: {
-		user_id,
-		order_id,
-		expireAt,
-		uuid,
-	},
-	confirmation: {
-		type: "redirect",
-		return_url: "https://t.me/createdspacebot",
-	},
-	description: `Оплата заказа ${order_id}`,
-	receipt: {
-		// Если нужен чек
-		customer: {
-			email,
-		},
-		items: [
-			{
-				description: "Оплата подписки",
-				quantity: "1.00",
-				amount: {
-					value: price,
-					currency: "RUB",
-				},
-				vat_code: 1,
-			},
-		],
-	},
-});
 
 export const start_response = async (context: any) => {
+
 	try {
 		const user = await db.getUser(context.from.id, context.from.username);
 		const isNew = user.data.expireAt === null;
 
 		if (isNew) {
 			const randomName = uniqueNamesGenerator({ dictionaries: [adjectives, colors], length: 2 });
+			const referrerId = null
 			const payload = get_new_user_request_params(randomName, context.from.id);
 			const response = await userService.addUser(payload);
 
@@ -61,7 +25,7 @@ export const start_response = async (context: any) => {
 
 			const { expireAt, uuid, subscriptionUrl } = response.data.response;
 
-			const error = await db.updateUser(context.from.id, expireAt, uuid);
+			const error = await db.updateUser(context.from.id, expireAt, uuid, referrerId);
 
 			if (error) throw error;
 
@@ -110,9 +74,9 @@ export const buy_response = async (context) => {
 		return;
 	}
 
-	const response = await db.getUserData(context.from.id, "expireAt, uuid, email");
+	const response = await db.getUserData(context.from.id, "expireAt, uuid, email, referrer");
 
-	const { expireAt, uuid, email } = response;
+	const { expireAt, uuid, email, referrer } = response;
 
 	const now = dayjs();
 
@@ -132,6 +96,8 @@ export const buy_response = async (context) => {
 
 		return;
 	}
+
+	const subText = `Подписка до: ${bold(dayjs(date_to_start).add(1, "month").format("DD.MM.YYYY"))} ${referrer ? '+ 1 бонусный месяц' : ''}` 
 
 	switch (id) {
 		// case 1:
@@ -159,7 +125,7 @@ export const buy_response = async (context) => {
 		case 2:
 			{
 				try {
-					const payment = await checkout.createPayment(createPayload(price, context.from.id, order_id, date_to_start, uuid, email), order_id);
+					const payment = await checkout.createPayment(createPayload(price, context.from.id, order_id, date_to_start, uuid, email, referrer), order_id);
 
 					if (!payment.confirmation) {
 						throw new Error("error");
@@ -168,7 +134,7 @@ export const buy_response = async (context) => {
 					context.send(
 						formatSaveIndents`Оплата подписки на 1 месяц:
 					Стоимость: ${bold(price)} ₽
-					Подписка до: ${bold(dayjs(date_to_start).add(1, "month").format("DD.MM.YYYY"))}
+					${subText}
 					Номер заказа: ${order_id}
 					`,
 						{
@@ -191,9 +157,9 @@ export const profile_response = async (context) => {
 	try {
 		const response = await userService.getUser(context.from.id);
 
-		const { subscriptionUrl, expireAt } = response.data.response[0];
+		const { subscriptionUrl, expireAt, uuid } = response.data.response[0];
 
-		context.send(profile(subscriptionUrl, expireAt));
+		context.send(profile(subscriptionUrl, expireAt, uuid));
 	} catch (e) {
 		console.log(e);
 		context.send("Ошибка");
